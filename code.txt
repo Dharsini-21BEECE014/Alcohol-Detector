@@ -1,0 +1,102 @@
+#include <LiquidCrystal.h>
+LiquidCrystal lcd(13, 12, 11, 10, 9, 8);
+
+#include <TinyGPS++.h>
+#include <SoftwareSerial.h>
+
+static const int RXPin = 3, TXPin = 4;
+static const uint32_t GPSBaud = 9600;
+
+#define buzz 2
+#define gas A0
+
+#define m1 5
+#define m2 6
+#define en 7
+
+
+// The TinyGPS++ object
+TinyGPSPlus gps;
+
+// The serial connection to the GPS device
+SoftwareSerial ss(RXPin, TXPin);
+
+void setup()
+{
+  Serial.begin(9600);
+
+  ss.begin(GPSBaud);
+
+  pinMode(buzz, OUTPUT);
+  pinMode(gas, INPUT);
+
+  pinMode(m1, OUTPUT);
+  pinMode(m2, OUTPUT);
+  pinMode(en, OUTPUT);
+
+}
+void loop()
+{
+  int G = analogRead(gas);
+  lcd.setCursor(0, 0);
+  lcd.print("Gas value:");
+  lcd.setCursor(11, 0);
+  lcd.print(G);
+  delay(1000);
+  lcd.setCursor(11, 0);
+  lcd.print("    ");
+  digitalWrite(m1, 1);
+  digitalWrite(m2, 0);
+  if (G > 80) {
+    lcd.clear();
+    delay(10);
+    lcd.setCursor(0, 0);
+    lcd.print("   Found   ");
+    lcd.setCursor(0, 1);
+    lcd.print("Drunk and Drive");
+    Speeddown();
+    digitalWrite(buzz, 1);
+    delay(1000);
+    digitalWrite(buzz, 0);
+    if (ss.available() > 0) {
+      gps.encode(ss.read());
+      if (gps.location.isUpdated()) {
+        double lat=gps.location.lat();
+        double lng=gps.location.lng();
+        Serial.println("AT");
+        delay(100);
+        Serial.println("AT+CMGF=1");
+        delay(100);
+        Serial.println("AT+CMGS=\"Your Mobile Number\"\r");
+        delay(100);
+        Serial.println("Alert:Found Drunk and Drive");
+        delay(100);
+        Serial.println(String("www.google.com.ph/maps/place/")+String(lat,6)+","+String(lng,6));
+        delay(100);
+        Serial.println((char)26);
+        delay(100);
+        delay(2000);
+      }
+    }
+    lcd.clear();
+    delay(10);
+    Speedup();
+  }
+ 
+}
+void Speedup() {
+  for (int i = 0; i < 255; i++) {
+    analogWrite(m1, i);
+    analogWrite(m2, 0);
+    delay(20);
+  }
+}
+void Speeddown() {
+
+  for (int i = 255; i > 0; i--) {
+    analogWrite(m1, i);
+    analogWrite(m2, 0);
+    delay(20);
+  }
+}
+
